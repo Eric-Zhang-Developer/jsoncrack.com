@@ -1,7 +1,8 @@
 import React from "react";
 import type { ModalProps } from "@mantine/core";
-import { Modal, Stack, Text, ScrollArea, Flex, CloseButton } from "@mantine/core";
+import { Modal, Stack, Text, ScrollArea, Flex, CloseButton, Button, Group } from "@mantine/core";
 import { CodeHighlight } from "@mantine/code-highlight";
+import { VscEdit } from "react-icons/vsc";
 import type { NodeData } from "../../../types/graph";
 import useGraph from "../../editor/views/GraphView/stores/useGraph";
 
@@ -37,7 +38,19 @@ export const NodeModal = ({ opened, onClose }: ModalProps) => {
             <Text fz="xs" fw={500}>
               Content
             </Text>
-            <CloseButton onClick={onClose} />
+            <Group gap="xs">
+              <Button
+                size="xs"
+                variant="light"
+                leftSection={<VscEdit size={14} />}
+                onClick={() => {
+                  console.log("Edit clicked");
+                }}
+              >
+                Edit
+              </Button>
+              <CloseButton onClick={onClose} />
+            </Group>
           </Flex>
           <ScrollArea.Autosize mah={250} maw={600}>
             <CodeHighlight
