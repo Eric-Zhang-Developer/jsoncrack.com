@@ -43,6 +43,7 @@ export const NodeModal = ({ opened, onClose }: ModalProps) => {
   const nodeData = useGraph(state => state.selectedNode);
   const [isEditing, setIsEditing] = React.useState(false);
   const [editedValues, setEditedValues] = React.useState<Record<string, string>>({});
+  const [originalValues, setOriginalValues] = React.useState<Record<string, string>>({});
 
   // Initialize edited values when entering edit mode
   React.useEffect(() => {
@@ -54,6 +55,7 @@ export const NodeModal = ({ opened, onClose }: ModalProps) => {
         stringValues[key] = String(value ?? "");
       });
       setEditedValues(stringValues);
+      setOriginalValues(stringValues); // Store original for cancel
     }
   }, [isEditing, nodeData]);
 
@@ -62,6 +64,7 @@ export const NodeModal = ({ opened, onClose }: ModalProps) => {
     if (!opened) {
       setIsEditing(false);
       setEditedValues({});
+      setOriginalValues({});
     }
   }, [opened]);
 
@@ -74,6 +77,18 @@ export const NodeModal = ({ opened, onClose }: ModalProps) => {
       ...prev,
       [key]: value,
     }));
+  };
+
+  const handleSave = () => {
+    // TODO: Implement actual save logic in Milestone 4-5
+    console.log("Save clicked", editedValues);
+    setIsEditing(false);
+  };
+
+  const handleCancel = () => {
+    // Discard changes and restore original values
+    setEditedValues(originalValues);
+    setIsEditing(false);
   };
 
   const nodeObj = nodeData ? normalizeNodeData(nodeData.text ?? []) : {};
@@ -97,6 +112,16 @@ export const NodeModal = ({ opened, onClose }: ModalProps) => {
                 >
                   Edit
                 </Button>
+              )}
+              {isEditing && (
+                <>
+                  <Button size="xs" variant="subtle" onClick={handleCancel}>
+                    Cancel
+                  </Button>
+                  <Button size="xs" color="green" onClick={handleSave}>
+                    Save
+                  </Button>
+                </>
               )}
               <CloseButton onClick={onClose} />
             </Group>
