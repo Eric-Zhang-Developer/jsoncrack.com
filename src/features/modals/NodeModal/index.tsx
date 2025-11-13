@@ -13,6 +13,8 @@ import {
 } from "@mantine/core";
 import { CodeHighlight } from "@mantine/code-highlight";
 import { VscEdit } from "react-icons/vsc";
+import useFile from "../../../store/useFile";
+import useJson from "../../../store/useJson";
 import type { NodeData } from "../../../types/graph";
 import useGraph from "../../editor/views/GraphView/stores/useGraph";
 
@@ -39,8 +41,61 @@ const jsonPathToString = (path?: NodeData["path"]) => {
   return `$[${segments.join("][")}]`;
 };
 
+// Utility function to update JSON at a specific path
+const updateJsonAtPath = (
+  json: any,
+  path: NodeData["path"],
+  newValues: Record<string, string>
+): any => {
+  if (!path || path.length === 0) {
+    // Root level - replace entire object
+    return newValues;
+  }
+
+  // Deep clone to avoid mutating original
+  const cloned = JSON.parse(JSON.stringify(json));
+
+  // Navigate to the parent of the target node
+  let current = cloned;
+  for (let i = 0; i < path.length - 1; i++) {
+    current = current[path[i]];
+  }
+
+  // Update the target node with new values
+  const lastKey = path[path.length - 1];
+  if (
+    current[lastKey] &&
+    typeof current[lastKey] === "object" &&
+    !Array.isArray(current[lastKey])
+  ) {
+    // Update each property in the object
+    Object.entries(newValues).forEach(([key, value]) => {
+      // Try to preserve original type (number, boolean, null)
+      const originalValue = current[lastKey][key];
+      if (originalValue !== undefined) {
+        // Try to parse as number or boolean, otherwise keep as string
+        if (typeof originalValue === "number") {
+          current[lastKey][key] = isNaN(Number(value)) ? value : Number(value);
+        } else if (typeof originalValue === "boolean") {
+          current[lastKey][key] = value === "true" || value === "false" ? value === "true" : value;
+        } else if (originalValue === null) {
+          current[lastKey][key] = value === "null" ? null : value;
+        } else {
+          current[lastKey][key] = value;
+        }
+      } else {
+        current[lastKey][key] = value;
+      }
+    });
+  }
+
+  return cloned;
+};
+
 export const NodeModal = ({ opened, onClose }: ModalProps) => {
   const nodeData = useGraph(state => state.selectedNode);
+  const getJson = useJson(state => state.getJson);
+  const setContents = useFile(state => state.setContents);
   const [isEditing, setIsEditing] = React.useState(false);
   const [editedValues, setEditedValues] = React.useState<Record<string, string>>({});
   const [originalValues, setOriginalValues] = React.useState<Record<string, string>>({});
@@ -80,9 +135,25 @@ export const NodeModal = ({ opened, onClose }: ModalProps) => {
   };
 
   const handleSave = () => {
-    // TODO: Implement actual save logic in Milestone 4-5
-    console.log("Save clicked", editedValues);
-    setIsEditing(false);
+    if (!nodeData) return;
+
+    try {
+      // Get current JSON
+      const currentJson = getJson();
+      const jsonObj = JSON.parse(currentJson);
+
+      // Update JSON at the node's path with edited values
+      const updatedJson = updateJsonAtPath(jsonObj, nodeData.path, editedValues);
+      const updatedJsonString = JSON.stringify(updatedJson, null, 2);
+
+      // Update the file contents, which will trigger graph update
+      setContents({ contents: updatedJsonString, hasChanges: true });
+
+      // Exit edit mode
+      setIsEditing(false);
+    } catch (error) {
+      console.error("Error saving node:", error);
+    }
   };
 
   const handleCancel = () => {
